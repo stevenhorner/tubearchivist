@@ -1,6 +1,7 @@
 """send notifications using apprise"""
 
 import apprise
+from apprise import NotifyFormat
 from common.src.es_connect import ElasticWrap
 from task.src.task_config import TASK_CONFIG
 from task.src.task_manager import TaskManager
@@ -22,7 +23,7 @@ class Notifications:
         if not urls:
             return
 
-        title, body = self._build_message(task_id, task_title)
+        title, body, attach_urls = self._build_message(task_id, task_title)
 
         if not body:
             return
@@ -30,7 +31,14 @@ class Notifications:
         for url in urls:
             apobj.add(url)
 
-        apobj.notify(body=body, title=title)
+        # Use markdown body type for better formatting
+        # Include thumbnail attachments if available
+        apobj.notify(
+            body=body,
+            title=title,
+            body_format=NotifyFormat.MARKDOWN,
+            attach=attach_urls if attach_urls else None,
+        )
 
     def test(self, url) -> tuple[bool, str]:
         """send test notification"""
@@ -66,14 +74,75 @@ class Notifications:
 
     def _build_message(
         self, task_id: str, task_title: str
-    ) -> tuple[str, str | None]:
+    ) -> tuple[str, str | None, list[str] | None]:
         """build message to send notification"""
         task = TaskManager().get_task(task_id)
         status = task.get("status")
         title: str = f"[TA] {task_title} process ended with {status}"
-        body: str | None = task.get("result")
+        result = task.get("result")
 
-        return title, body
+        # Check if result contains structured video data
+        if isinstance(result, dict) and "videos" in result:
+            body, attach_urls = self._format_video_details(result)
+        else:
+            body: str | None = result
+            attach_urls = None
+
+        return title, body, attach_urls
+
+    def _format_video_details(
+        self, result: dict
+    ) -> tuple[str, list[str] | None]:
+        """format video details for notification using Markdown"""
+        from datetime import datetime
+
+        message_lines = [result.get("message", "")]
+        videos = result.get("videos", [])
+
+        if not videos:
+            return message_lines[0], None
+
+        message_lines.append("\n## 📹 Downloaded Videos\n")
+
+        # Collect thumbnail URLs for attachments (limit to first 3)
+        attach_urls = []
+
+        for idx, video in enumerate(videos, 1):
+            title = video.get("title", "Unknown Title")
+            channel_name = video.get("channel_name", "Unknown Channel")
+            youtube_id = video.get("youtube_id", "")
+            duration = video.get("duration", "")
+            published = video.get("published", "")
+            thumb_url = video.get("vid_thumb_url", "")
+
+            # Collect thumbnail URL (limit to 3 to avoid overloading)
+            if thumb_url and len(attach_urls) < 3:
+                attach_urls.append(thumb_url)
+
+            # Format video entry with Markdown
+            video_url = f"https://www.youtube.com/watch?v={youtube_id}"
+            message_lines.append(f"### {idx}. {title}")
+            message_lines.append(f"**Channel:** {channel_name}")
+
+            if duration:
+                message_lines.append(f"**Duration:** {duration}")
+
+            if published:
+                try:
+                    pub_date = datetime.fromisoformat(
+                        published.replace("Z", "+00:00")
+                    )
+                    message_lines.append(
+                        f"**Published:** {pub_date.strftime('%Y-%m-%d')}"
+                    )
+                except (ValueError, AttributeError):
+                    pass
+
+            message_lines.append(f"**URL:** {video_url}")
+            message_lines.append("")  # Empty line between videos
+
+        body = "\n".join(message_lines)
+        return body, attach_urls if attach_urls else None
 
     def get_urls(self) -> list[str]:
         """get stored urls for task"""
