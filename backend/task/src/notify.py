@@ -122,6 +122,11 @@ class Notifications:
             # Format video entry with Markdown
             video_url = f"https://www.youtube.com/watch?v={youtube_id}"
             message_lines.append(f"### {idx}. {title}")
+
+            # Embed thumbnail image if available
+            if thumb_url:
+                message_lines.append(f"![Thumbnail]({thumb_url})")
+
             message_lines.append(f"**Channel:** {channel_name}")
 
             if duration:
