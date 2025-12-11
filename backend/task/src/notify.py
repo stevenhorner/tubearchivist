@@ -121,16 +121,16 @@ class Notifications:
 
             # Format video entry with Markdown
             video_url = f"https://www.youtube.com/watch?v={youtube_id}"
-            message_lines.append(f"### {idx}. {title}")
+            message_lines.append(f"### {idx}. {title}\n")
 
             # Embed thumbnail image if available
             if thumb_url:
-                message_lines.append(f"![Thumbnail]({thumb_url})")
+                message_lines.append(f"![Thumbnail]({thumb_url})\n")
 
-            message_lines.append(f"**Channel:** {channel_name}")
+            message_lines.append(f"**Channel:** {channel_name}  ")
 
             if duration:
-                message_lines.append(f"**Duration:** {duration}")
+                message_lines.append(f"**Duration:** {duration}  ")
 
             if published:
                 try:
@@ -138,12 +138,12 @@ class Notifications:
                         published.replace("Z", "+00:00")
                     )
                     message_lines.append(
-                        f"**Published:** {pub_date.strftime('%Y-%m-%d')}"
+                        f"**Published:** {pub_date.strftime('%Y-%m-%d')}  "
                     )
                 except (ValueError, AttributeError):
                     pass
 
-            message_lines.append(f"**URL:** {video_url}")
+            message_lines.append(f"**URL:** {video_url}\n")
             message_lines.append("")  # Empty line between videos
 
         body = "\n".join(message_lines)
