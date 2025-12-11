@@ -2,6 +2,7 @@
 
 import apprise
 from apprise import NotifyFormat
+from common.src.env_settings import EnvironmentSettings
 from common.src.es_connect import ElasticWrap
 from task.src.task_config import TASK_CONFIG
 from task.src.task_manager import TaskManager
@@ -121,6 +122,11 @@ class Notifications:
 
             # Format video entry with Markdown
             video_url = f"https://www.youtube.com/watch?v={youtube_id}"
+
+            # Get TubeArchivist URL
+            ta_host = EnvironmentSettings.TA_HOST.split()[0]  # Get first host
+            ta_video_url = f"{ta_host}/video/{youtube_id}"
+
             message_lines.append(f"### {idx}. {title}\n")
 
             # Embed thumbnail image if available
@@ -143,7 +149,10 @@ class Notifications:
                 except (ValueError, AttributeError):
                     pass
 
-            message_lines.append(f"**URL:** [Watch on YouTube]({video_url})\n")
+            message_lines.append(
+                f"**Watch:** [TubeArchivist]({ta_video_url}) | "
+                f"[YouTube]({video_url})\n"
+            )
             message_lines.append("")  # Empty line between videos
 
         body = "\n".join(message_lines)
