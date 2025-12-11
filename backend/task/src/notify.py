@@ -31,12 +31,12 @@ class Notifications:
         for url in urls:
             apobj.add(url)
 
-        # Use markdown body type for better formatting
+        # Use text format for better compatibility across services
         # Include thumbnail attachments if available
         apobj.notify(
             body=body,
             title=title,
-            body_format=NotifyFormat.MARKDOWN,
+            body_format=NotifyFormat.TEXT,
             attach=attach_urls if attach_urls else None,
         )
 
@@ -93,7 +93,7 @@ class Notifications:
     def _format_video_details(
         self, result: dict
     ) -> tuple[str, list[str] | None]:
-        """format video details for notification using Markdown"""
+        """format video details for notification as plain text"""
         from datetime import datetime
 
         message_lines = [result.get("message", "")]
@@ -102,7 +102,7 @@ class Notifications:
         if not videos:
             return message_lines[0], None
 
-        message_lines.append("\n## 📹 Downloaded Videos\n")
+        message_lines.append("\n📹 Downloaded Videos:\n")
 
         # Collect thumbnail URLs for attachments (limit to first 3)
         attach_urls = []
@@ -119,13 +119,13 @@ class Notifications:
             if thumb_url and len(attach_urls) < 3:
                 attach_urls.append(thumb_url)
 
-            # Format video entry with Markdown
+            # Format video entry as plain text
             video_url = f"https://www.youtube.com/watch?v={youtube_id}"
-            message_lines.append(f"### {idx}. {title}")
-            message_lines.append(f"**Channel:** {channel_name}")
+            message_lines.append(f"{idx}. {title}")
+            message_lines.append(f"   Channel: {channel_name}")
 
             if duration:
-                message_lines.append(f"**Duration:** {duration}")
+                message_lines.append(f"   Duration: {duration}")
 
             if published:
                 try:
@@ -133,12 +133,12 @@ class Notifications:
                         published.replace("Z", "+00:00")
                     )
                     message_lines.append(
-                        f"**Published:** {pub_date.strftime('%Y-%m-%d')}"
+                        f"   Published: {pub_date.strftime('%Y-%m-%d')}"
                     )
                 except (ValueError, AttributeError):
                     pass
 
-            message_lines.append(f"**URL:** {video_url}")
+            message_lines.append(f"   {video_url}")
             message_lines.append("")  # Empty line between videos
 
         body = "\n".join(message_lines)
