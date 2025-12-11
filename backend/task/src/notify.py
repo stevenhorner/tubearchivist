@@ -143,7 +143,7 @@ class Notifications:
                 except (ValueError, AttributeError):
                     pass
 
-            message_lines.append(f"**URL:** {video_url}\n")
+            message_lines.append(f"**URL:** [Watch on YouTube]({video_url})\n")
             message_lines.append("")  # Empty line between videos
 
         body = "\n".join(message_lines)
