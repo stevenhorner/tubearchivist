@@ -144,7 +144,10 @@ def download_pending(self, auto_only=False):
         raise exc
 
     if downloaded:
-        return f"downloaded {downloaded} video(s)."
+        return {
+            "message": f"downloaded {downloaded} video(s).",
+            "videos": downloader.downloaded_videos,
+        }
 
     return None
 

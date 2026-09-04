@@ -53,6 +53,7 @@ class VideoDownloader(DownloaderBase):
     def __init__(self, task=False):
         super().__init__(task)
         self.obs = False
+        self.downloaded_videos: list[dict] = []
         self._build_obs()
 
     def run_queue(self, auto_only=False) -> tuple[int, int]:
@@ -87,6 +88,17 @@ class VideoDownloader(DownloaderBase):
             self._notify(video_data, "Move downloaded file to archive")
             self.move_to_archive(vid_dict)
             self._delete_from_pending(youtube_id)
+            self.downloaded_videos.append(
+                {
+                    "title": vid_dict.get("title"),
+                    "channel_name": vid_dict["channel"].get("channel_name"),
+                    "channel_id": vid_dict["channel"].get("channel_id"),
+                    "youtube_id": youtube_id,
+                    "vid_thumb_url": vid_dict.get("vid_thumb_url"),
+                    "published": vid_dict.get("published"),
+                    "duration": vid_dict.get("player", {}).get("duration_str"),
+                }
+            )
             downloaded += 1
 
         # post processing
