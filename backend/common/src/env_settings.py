@@ -53,6 +53,7 @@ class EnvironmentSettings:
     TA_PORT: int = int(environ.get("TA_PORT", False))
     TA_USERNAME: str = str(environ.get("TA_USERNAME"))
     TA_PASSWORD: str = get_password_from_file("TA_PASSWORD")
+    TA_HOST: str = str(environ.get("TA_HOST", "http://localhost:8000"))
 
     # Application Paths
     MEDIA_DIR: str = str(environ.get("TA_MEDIA_DIR", "/youtube"))
