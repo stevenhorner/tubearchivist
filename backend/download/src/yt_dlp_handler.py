@@ -352,13 +352,6 @@ class DownloadPostProcess(DownloaderBase):
         if not to_delete:
             return
 
-        for video in to_delete:
-            youtube_id = video["youtube_id"]
-            print(f"{youtube_id}: auto delete video")
-            YoutubeVideo(youtube_id).delete_media_file()
-
-        print("add deleted to ignore list")
-
         parsed_ids: list[ParsedURLType] = []
 
         for video_item in to_delete:
@@ -371,7 +364,31 @@ class DownloadPostProcess(DownloaderBase):
                 }
             )
 
-        PendingList(youtube_ids=parsed_ids).parse_url_list(status="ignore")
+        # add to ignore list before deleting from ta_video: force=True is
+        # required, otherwise PendingList skips ids still indexed in
+        # ta_video, leaving no ta_download record once the video is gone
+        print("add to ignore list before delete")
+        PendingList(youtube_ids=parsed_ids, force=True).parse_url_list(
+            status="ignore"
+        )
+
+        youtube_ids = [video["youtube_id"] for video in to_delete]
+        response, status_code = ElasticWrap("ta_download/_mget").get(
+            data={"ids": youtube_ids}
+        )
+        ignored_ids = {
+            item["_id"]
+            for item in response.get("docs", [])
+            if item.get("found") and item["_source"].get("status") == "ignore"
+        }
+        if status_code != 200 or ignored_ids != set(youtube_ids):
+            print("failed to verify ignore list, abort auto delete")
+            return
+
+        for video in to_delete:
+            youtube_id = video["youtube_id"]
+            print(f"{youtube_id}: auto delete video")
+            YoutubeVideo(youtube_id).delete_media_file()
 
     def refresh_playlist(self) -> None:
         """match videos with playlists"""

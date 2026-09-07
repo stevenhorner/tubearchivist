@@ -32,8 +32,8 @@ class PendingIndex:
     """base class holding all export methods"""
 
     def __init__(self):
-        self.all_pending = False
-        self.all_ignored = False
+        self.all_pending: list[dict] = []
+        self.all_ignored: list[dict] = []
         self.all_videos = False
         self.all_channels = False
         self.channel_overwrites = False
@@ -127,8 +127,12 @@ class PendingList(PendingIndex):
 
     def parse_url_list(self, status="pending") -> int:
         """extract youtube ids from list"""
-        self.get_download()
+        self.to_skip = []
+        # Match auto-delete's ignore-then-delete transition order.
         self.get_indexed()
+        indexed_ids = self.to_skip.copy()
+        self.get_download()
+        self.to_skip.extend(indexed_ids)
         self.get_channels()
         total = len(self.youtube_ids)
         for idx, entry in enumerate(self.youtube_ids, start=1):
@@ -184,7 +188,9 @@ class PendingList(PendingIndex):
             print(f"{url}: skipped adding already indexed video to download.")
             return None
 
-        if self.force and url in self.all_ignored or url in self.all_pending:
+        ignored_ids = {item["youtube_id"] for item in self.all_ignored or []}
+        pending_ids = {item["youtube_id"] for item in self.all_pending or []}
+        if (self.force and url in ignored_ids) or url in pending_ids:
             print(f"{url}: skipped adding force video already in queue.")
             return None
 
@@ -482,9 +488,9 @@ class PendingList(PendingIndex):
         # add last newline
         bulk_list.append("\n")
         query_str = "\n".join(bulk_list)
-        response, status_code = ElasticWrap("_bulk").post(
-            query_str, ndjson=True
-        )
+        refresh = self.force and status == "ignore"
+        path = "_bulk?refresh=true" if refresh else "_bulk"
+        response, status_code = ElasticWrap(path).post(query_str, ndjson=True)
         if status_code not in [200, 201]:
             print(response)
             self._notify_fail(status_code)
